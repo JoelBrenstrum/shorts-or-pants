@@ -7,6 +7,7 @@ export function hour(time: string, overrides: Partial<HourWeather> = {}): HourWe
     apparentTemp: 20,
     humidity: 50,
     windKmh: 10,
+    windDir: 0,
     precipProb: 0,
     uv: 0,
     weatherCode: 0,

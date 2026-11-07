@@ -6,6 +6,7 @@ const HOURLY = [
   'apparent_temperature',
   'relative_humidity_2m',
   'wind_speed_10m',
+  'wind_direction_10m',
   'precipitation_probability',
   'uv_index',
   'weather_code',
@@ -51,6 +52,7 @@ export function parseForecast(res: OpenMeteoResponse): Forecast {
         temp: at('temperature_2m', i) ?? apparentTemp,
         humidity: at('relative_humidity_2m', i) ?? 0,
         windKmh: at('wind_speed_10m', i) ?? 0,
+        windDir: at('wind_direction_10m', i) ?? 0,
         precipProb: at('precipitation_probability', i) ?? 0,
         uv: at('uv_index', i) ?? 0,
         weatherCode: at('weather_code', i) ?? 0,
@@ -80,19 +82,13 @@ export function currentSlotTime(slots: HourWeather[], now: string): string | und
   return (past[past.length - 1] ?? slots[0])?.time
 }
 
-export function dayLabel(date: string, today: string): string {
-  if (date === today) return 'Today'
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-NZ', { weekday: 'short', timeZone: 'UTC' })
-}
+export type WeatherKind = 'sun' | 'night' | 'cloud' | 'rain' | 'wind'
 
-export function weatherGlyph(code: number, isDay: boolean): string {
-  if (code >= 95) return '⛈️'
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '🌨️'
-  if (code >= 51) return '🌧️'
-  if (code === 45 || code === 48) return '🌫️'
-  if (code === 3) return '☁️'
-  if (code === 2) return isDay ? '⛅' : '☁️'
-  return isDay ? '☀️' : '🌙'
+export function weatherKind(h: HourWeather): WeatherKind {
+  if (h.weatherCode >= 51) return 'rain'
+  if (h.windKmh >= 30) return 'wind'
+  if (h.weatherCode >= 2) return 'cloud'
+  return h.isDay ? 'sun' : 'night'
 }
 
 export async function fetchForecast(latitude: number, longitude: number): Promise<Forecast> {

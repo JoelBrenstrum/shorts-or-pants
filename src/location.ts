@@ -27,18 +27,37 @@ export function parseCfLocation(cf: unknown): Place | null {
   return toPlace(c.latitude, c.longitude, nonEmpty(c.city) ?? nonEmpty(c.country) ?? 'Somewhere')
 }
 
-export function parseGeocode(json: unknown): Place | null {
-  if (!json || typeof json !== 'object') return null
-  const results = (json as { results?: unknown }).results
-  const first = Array.isArray(results) ? (results[0] as Record<string, unknown> | undefined) : undefined
-  if (!first) return null
-  const name = nonEmpty(first.name)
-  if (!name) return null
-  const country = nonEmpty(first.country)
-  return toPlace(first.latitude, first.longitude, country ? `${name}, ${country}` : name)
+export interface SearchResult extends Place {
+  region: string
 }
 
-export function geocodeUrl(query: string): string {
-  const params = new URLSearchParams({ name: query, count: '1', language: 'en', format: 'json' })
+export function parseGeocodeResults(json: unknown): SearchResult[] {
+  if (!json || typeof json !== 'object') return []
+  const results = (json as { results?: unknown }).results
+  if (!Array.isArray(results)) return []
+  return results.flatMap((raw): SearchResult[] => {
+    if (!raw || typeof raw !== 'object') return []
+    const r = raw as Record<string, unknown>
+    const name = nonEmpty(r.name)
+    const place = name ? toPlace(r.latitude, r.longitude, name) : null
+    if (!place) return []
+    const region = [nonEmpty(r.admin1), nonEmpty(r.country)].filter((part) => part && part !== name).join(', ')
+    return [{ ...place, region }]
+  })
+}
+
+export function geocodeUrl(query: string, count = 6): string {
+  const params = new URLSearchParams({ name: query, count: String(count), language: 'en', format: 'json' })
   return `https://geocoding-api.open-meteo.com/v1/search?${params}`
+}
+
+export function reverseGeocodeUrl(latitude: number, longitude: number): string {
+  const params = new URLSearchParams({ latitude: latitude.toFixed(3), longitude: longitude.toFixed(3), localityLanguage: 'en' })
+  return `https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`
+}
+
+export function parseReverseGeocode(json: unknown): string | null {
+  if (!json || typeof json !== 'object') return null
+  const r = json as Record<string, unknown>
+  return nonEmpty(r.city) ?? nonEmpty(r.locality) ?? nonEmpty(r.principalSubdivision) ?? null
 }

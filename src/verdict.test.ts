@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { day, hour } from './fixtures'
-import { confidenceOf, formatHour, reasonFor, scoreHour, summarizeDay } from './verdict'
+import {
+  compass,
+  confidenceLabel,
+  confidenceOf,
+  confidenceSegments,
+  formatHour,
+  reasonFor,
+  scoreHour,
+  summarizeDay,
+  windName,
+} from './verdict'
 
-const lean = (h: ReturnType<typeof scoreHour>, key: string) => h.factors.find((f) => f.key === key)?.lean ?? NaN
+const lean = (v: ReturnType<typeof scoreHour>, key: string) => v.factors.find((f) => f.key === key)?.lean ?? NaN
+const DATE = '2026-11-08'
 
 describe('formatHour', () => {
   it.each([
@@ -13,7 +24,7 @@ describe('formatHour', () => {
   ])('%s → %s', (time, expected) => expect(formatHour(time)).toBe(expected))
 })
 
-describe('confidenceOf', () => {
+describe('confidence', () => {
   it.each([
     [5, 'strong'],
     [-4, 'strong'],
@@ -21,7 +32,35 @@ describe('confidenceOf', () => {
     [-1.5, 'likely'],
     [0.5, 'borderline'],
     [-1, 'borderline'],
-  ])('%d → %s', (score, expected) => expect(confidenceOf(score)).toBe(expected))
+  ])('confidenceOf(%d) → %s', (score, expected) => expect(confidenceOf(score)).toBe(expected))
+
+  it.each([
+    [7, 5],
+    [-4.5, 4],
+    [3, 3],
+    [1.6, 2],
+    [0.2, 1],
+  ])('confidenceSegments(%d) → %d', (score, expected) => expect(confidenceSegments(score)).toBe(expected))
+
+  it('labels confidence per garment', () => {
+    expect(confidenceLabel({ garment: 'shorts', confidence: 'strong' })).toBe('Strong shorts day')
+    expect(confidenceLabel({ garment: 'pants', confidence: 'likely' })).toBe('Leaning pants')
+    expect(confidenceLabel({ garment: 'pants', confidence: 'borderline' })).toBe('Borderline, your call')
+  })
+})
+
+describe('wind direction', () => {
+  it.each([
+    [0, 'N', 'northerly'],
+    [180, 'S', 'southerly'],
+    [200, 'S', 'southerly'],
+    [225, 'SW', "sou'westerly"],
+    [350, 'N', 'northerly'],
+    [-90, 'W', 'westerly'],
+  ])('%d° → %s / %s', (deg, short, name) => {
+    expect(compass(deg)).toBe(short)
+    expect(windName(deg)).toBe(name)
+  })
 })
 
 describe('scoreHour', () => {
@@ -74,28 +113,47 @@ describe('scoreHour', () => {
 
 describe('summarizeDay', () => {
   it('scores the active 9am–6pm window rather than the cold night', () => {
-    const v = summarizeDay(day('2026-11-08', (h) => ({ apparentTemp: h >= 9 && h <= 18 ? 25 : 5 })))
+    const v = summarizeDay(day(DATE, (h) => ({ apparentTemp: h >= 9 && h <= 18 ? 25 : 5 })))
     expect(v.garment).toBe('shorts')
-    expect(v.feelsLike).toBeCloseTo(25)
+    expect(v.average.apparentTemp).toBeCloseTo(25)
     expect(v.low).toBe(5)
     expect(v.high).toBe(25)
   })
 
+  it('uses the wind direction of the windiest hour', () => {
+    const v = summarizeDay(day(DATE, (h) => ({ windKmh: h === 12 ? 40 : 10, windDir: h === 12 ? 180 : 90 })))
+    expect(v.average.windDir).toBe(180)
+  })
+
   it('warns to pack pants when the evening turns cold', () => {
-    const v = summarizeDay(day('2026-11-08', (h) => ({ apparentTemp: h <= 18 ? 24 : 10 })))
+    const v = summarizeDay(day(DATE, (h) => ({ apparentTemp: h <= 18 ? 24 : 10 })))
     expect(v.garment).toBe('shorts')
-    expect(v.caveats).toContain('Pack pants for tonight')
+    expect(v.caveat).toBe('Shorts, but pack pants for tonight')
+  })
+
+  it('warns about rain on a shorts day', () => {
+    const v = summarizeDay(day(DATE, (h) => ({ apparentTemp: 26, precipProb: h >= 15 ? 60 : 0 })))
+    expect(v.caveat).toBe('Shorts, but rain from 3pm')
   })
 
   it('notes a shorts-worthy peak on a pants day', () => {
-    const v = summarizeDay(day('2026-11-08', (h) => ({ apparentTemp: h === 14 ? 22 : 12 })))
+    const v = summarizeDay(day(DATE, (h) => ({ apparentTemp: h === 14 ? 22 : 12 })))
     expect(v.garment).toBe('pants')
-    expect(v.caveats).toContain('Shorts-worthy around 2pm')
+    expect(v.caveat).toBe('Pants, but 2pm flirts with shorts')
   })
 
-  it('flags when rain becomes likely', () => {
-    const v = summarizeDay(day('2026-11-08', (h) => ({ precipProb: h >= 15 ? 70 : 10 })))
-    expect(v.caveats).toContain('Rain likely from 3pm')
+  it('flags when rain arrives on a pants day', () => {
+    const v = summarizeDay(day(DATE, (h) => ({ apparentTemp: 10, precipProb: h >= 15 ? 70 : 10 })))
+    expect(v.caveat).toBe('Pants. Rain from 3pm.')
+  })
+
+  it('calls out rain on and off all day', () => {
+    const v = summarizeDay(day(DATE, (h) => ({ apparentTemp: 10, precipProb: h % 2 === 0 ? 80 : 40 })))
+    expect(v.caveat).toBe('Pants. Rain on and off all day.')
+  })
+
+  it('has no caveat on a settled day', () => {
+    expect(summarizeDay(day(DATE, () => ({ apparentTemp: 26 }))).caveat).toBeUndefined()
   })
 
   it('falls back to all hours when none are in the active window', () => {
@@ -105,12 +163,27 @@ describe('summarizeDay', () => {
 })
 
 describe('reasonFor', () => {
-  it('describes a strong shorts day', () => {
-    expect(reasonFor(summarizeDay(day('2026-11-08', () => ({ apparentTemp: 27 }))))).toBe('Feels like 27°. Legs out.')
+  const reason = (hours: ReturnType<typeof day>, bias = 0) => reasonFor(summarizeDay(hours, bias), summarizeDay(hours, 0))
+
+  it('describes a calm strong shorts day', () => {
+    expect(reason(day(DATE, () => ({ apparentTemp: 27, windKmh: 5 })))).toBe('Feels like 27°, barely a breeze. Legs out.')
   })
 
-  it('mentions the wind when it is the main drag', () => {
-    const v = summarizeDay(day('2026-11-08', () => ({ apparentTemp: 9, windKmh: 45 })))
-    expect(reasonFor(v)).toBe("Feels like 9° with a stiff wind. Don't be a hero.")
+  it('names the wind when it is the main drag', () => {
+    expect(reason(day(DATE, () => ({ apparentTemp: 9, windKmh: 45, windDir: 180 })))).toBe(
+      "Feels like 9° with a stiff southerly. Don't be a hero.",
+    )
+  })
+
+  it('mentions rain when it is the main drag', () => {
+    expect(reason(day(DATE, () => ({ apparentTemp: 12, precipProb: 90 })))).toBe("Feels like 12° with rain about. Don't be a hero.")
+  })
+
+  it('owns up when a cold bias flips the day to pants', () => {
+    expect(reason(day(DATE, () => ({ apparentTemp: 19, windKmh: 15 })), -3)).toBe('Feels like 19°, but you run cold. Pants, no shame.')
+  })
+
+  it('owns up when a hot bias flips the day to shorts', () => {
+    expect(reason(day(DATE, () => ({ apparentTemp: 15, windKmh: 15 })), 3)).toBe('Feels like 15°, but you run hot. Legs out.')
   })
 })

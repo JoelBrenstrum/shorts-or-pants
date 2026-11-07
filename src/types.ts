@@ -4,6 +4,7 @@ export interface HourWeather {
   apparentTemp: number
   humidity: number
   windKmh: number
+  windDir: number
   precipProb: number
   uv: number
   weatherCode: number

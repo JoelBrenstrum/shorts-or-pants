@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { hour } from './fixtures'
 import {
   currentSlotTime,
-  dayLabel,
   forecastUrl,
   groupByDate,
   parseForecast,
   todaySlots,
-  weatherGlyph,
+  weatherKind,
   type OpenMeteoResponse,
 } from './forecast'
 
@@ -19,6 +18,7 @@ const response: OpenMeteoResponse = {
     apparent_temperature: [17, null, 15],
     relative_humidity_2m: [60, 62, null],
     wind_speed_10m: [12, 14, 20],
+    wind_direction_10m: [180, 190, null],
     precipitation_probability: [10, 20, null],
     uv_index: [3, 4, 1],
     weather_code: [1, 2, 61],
@@ -37,6 +37,7 @@ describe('parseForecast', () => {
       apparentTemp: 17,
       humidity: 60,
       windKmh: 12,
+      windDir: 180,
       precipProb: 10,
       uv: 3,
       weatherCode: 1,
@@ -92,22 +93,15 @@ describe('todaySlots and currentSlotTime', () => {
   })
 })
 
-describe('dayLabel', () => {
-  it('labels today and weekdays', () => {
-    expect(dayLabel('2026-11-08', '2026-11-08')).toBe('Today')
-    expect(dayLabel('2026-11-09', '2026-11-08')).toBe('Mon')
-  })
-})
-
-describe('weatherGlyph', () => {
+describe('weatherKind', () => {
   it.each([
-    [0, true, '☀️'],
-    [0, false, '🌙'],
-    [2, true, '⛅'],
-    [3, true, '☁️'],
-    [45, true, '🌫️'],
-    [61, true, '🌧️'],
-    [73, true, '🌨️'],
-    [95, true, '⛈️'],
-  ])('code %d day=%s → %s', (code, isDay, glyph) => expect(weatherGlyph(code, isDay)).toBe(glyph))
+    [{ weatherCode: 0, isDay: true }, 'sun'],
+    [{ weatherCode: 1, isDay: false }, 'night'],
+    [{ weatherCode: 3 }, 'cloud'],
+    [{ weatherCode: 45 }, 'cloud'],
+    [{ weatherCode: 61 }, 'rain'],
+    [{ weatherCode: 95 }, 'rain'],
+    [{ weatherCode: 2, windKmh: 35 }, 'wind'],
+    [{ weatherCode: 63, windKmh: 35 }, 'rain'],
+  ] as const)('%o → %s', (overrides, kind) => expect(weatherKind(hour('t', overrides))).toBe(kind))
 })
