@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { hour } from './fixtures'
 import {
   currentSlotTime,
+  dayWeather,
   forecastUrl,
   groupByDate,
   parseForecast,
@@ -109,4 +110,37 @@ describe('weatherKind', () => {
     [{ weatherCode: 2, windKmh: 35 }, 'wind'],
     [{ weatherCode: 63, windKmh: 35 }, 'rain'],
   ] as const)('%o → %s', (overrides, kind) => expect(weatherKind(hour('t', overrides))).toBe(kind))
+})
+
+describe('dayWeather', () => {
+  const at = (h: number, overrides: Parameters<typeof hour>[1] = {}) => hour(`2026-11-08T${String(h).padStart(2, '0')}:00`, overrides)
+  const daytime = (overrides: Parameters<typeof hour>[1] = {}) => [9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((h) => at(h, overrides))
+
+  it('calls a clear day sunny even when the night is cloudy', () => {
+    expect(dayWeather([at(2, { weatherCode: 3 }), ...daytime({ weatherCode: 1 })])).toEqual({ kind: 'sun', rainChance: 0 })
+  })
+
+  it('calls a mostly overcast day cloudy', () => {
+    expect(dayWeather(daytime({ weatherCode: 3 })).kind).toBe('cloud')
+  })
+
+  it('calls it rainy when a few daytime hours are wet', () => {
+    const hours = daytime({ weatherCode: 2, precipProb: 30 })
+    hours[3] = at(12, { weatherCode: 61, precipProb: 45 })
+    hours[4] = at(13, { weatherCode: 61, precipProb: 45 })
+    hours[5] = at(14, { weatherCode: 61, precipProb: 45 })
+    expect(dayWeather(hours)).toEqual({ kind: 'rain', rainChance: 45 })
+  })
+
+  it('ignores drizzle codes when rain is unlikely', () => {
+    expect(dayWeather(daytime({ weatherCode: 51, precipProb: 15 }))).toEqual({ kind: 'cloud', rainChance: 15 })
+  })
+
+  it('calls it rainy when rain is likely even without a rain code', () => {
+    expect(dayWeather(daytime({ weatherCode: 3, precipProb: 70 })).kind).toBe('rain')
+  })
+
+  it('calls a dry blustery day windy', () => {
+    expect(dayWeather(daytime({ weatherCode: 1, windKmh: 40 })).kind).toBe('wind')
+  })
 })

@@ -1,5 +1,5 @@
 import type { HourWeather } from './types'
-import { hourOf } from './verdict'
+import { activeHours, hourOf } from './verdict'
 
 const HOURLY = [
   'temperature_2m',
@@ -92,6 +92,20 @@ export function weatherKind(h: HourWeather): WeatherKind {
   if (h.windKmh >= 30) return 'wind'
   if (h.weatherCode >= 2) return 'cloud'
   return h.isDay ? 'sun' : 'night'
+}
+
+export interface DayWeather {
+  kind: WeatherKind
+  rainChance: number
+}
+
+export function dayWeather(hours: HourWeather[]): DayWeather {
+  const day = activeHours(hours)
+  const rainChance = Math.max(0, ...day.map((h) => h.precipProb))
+  const share = (kind: WeatherKind) => day.filter((h) => weatherKind({ ...h, isDay: true }) === kind).length / Math.max(day.length, 1)
+  const kind: WeatherKind =
+    (share('rain') >= 0.25 && rainChance >= 30) || rainChance >= 60 ? 'rain' : share('wind') >= 0.5 ? 'wind' : share('cloud') + share('rain') >= 0.5 ? 'cloud' : 'sun'
+  return { kind, rainChance: Math.round(rainChance) }
 }
 
 export async function fetchForecast(latitude: number, longitude: number): Promise<Forecast> {

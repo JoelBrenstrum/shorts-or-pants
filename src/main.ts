@@ -1,6 +1,6 @@
 import './style.css'
 import { dateLabel, factorCards, formatClock, slotFlag, switchSummary, tuneHint, tuneLabel, weekday, type Slot } from './copy'
-import { currentSlotTime, fetchForecast, groupByDate, todaySlots, weatherKind, type Forecast, type WeatherKind } from './forecast'
+import { currentSlotTime, dayWeather, fetchForecast, groupByDate, todaySlots, weatherKind, type Forecast, type WeatherKind } from './forecast'
 import { LOCKED, PANTS, SHORTS, type Art } from './art'
 import { choose, COLLECTION_KEY, collectionDay, emptyCollection, isFresh, openCollection, sealCollection, type Collection } from './collection'
 import { parseScheme, resolveScheme, SCHEME_KEY, toggleScheme, type Scheme } from './scheme'
@@ -344,10 +344,12 @@ function renderReady(forecast: Forecast): string {
     .map(([date, dayHours], i) => {
       const v = summarizeDay(dayHours, state.bias)
       const isToday = date === today
+      const wx = dayWeather(dayHours)
       return `<li class="day slide${isToday ? ' today' : ''}" style="animation-delay:${(0.3 + i * 0.05).toFixed(2)}s">
         <span class="day-name"><span>${weekday(date)}</span><span class="day-tag">${isToday ? 'Today' : ''}</span></span>
         <span class="day-icon tone-${v.garment}">${garmentIcon(v.garment, 22)}</span>
         <span class="day-word ${v.garment}">${capitalise(v.garment)}</span>
+        <span class="day-wx">${weatherIcon(wx.kind)}<span class="day-rain">${wx.rainChance >= 20 ? `${wx.rainChance}%` : ''}</span></span>
         <span class="day-temps"><span class="day-actual">${Math.round(v.tempHigh)}° <span>/ ${Math.round(v.tempLow)}°</span></span><span class="day-feels">feels ${Math.round(v.high)}° / ${Math.round(v.low)}°</span></span>
       </li>`
     })
