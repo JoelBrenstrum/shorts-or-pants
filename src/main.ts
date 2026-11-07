@@ -1,8 +1,8 @@
 import './style.css'
 import { dateLabel, factorCards, formatClock, slotFlag, switchSummary, tuneHint, tuneLabel, weekday, type Slot } from './copy'
 import { currentSlotTime, fetchForecast, groupByDate, todaySlots, weatherKind, type Forecast, type WeatherKind } from './forecast'
-import { PANTS, SHORTS, type Art } from './art'
-import { choose, COLLECTION_KEY, isFresh, parseCollection, type Collection } from './collection'
+import { LOCKED, PANTS, SHORTS, type Art } from './art'
+import { choose, COLLECTION_KEY, collectionDay, emptyCollection, isFresh, openCollection, sealCollection, type Collection } from './collection'
 import { parseScheme, resolveScheme, SCHEME_KEY, toggleScheme, type Scheme } from './scheme'
 import { geocodeUrl, parseGeocodeResults, parseReverseGeocode, reverseGeocodeUrl, type Place, type SearchResult } from './location'
 import {
@@ -46,9 +46,9 @@ let collection = readCollection()
 
 function readCollection(): Collection {
   try {
-    return parseCollection(JSON.parse(localStorage.getItem(COLLECTION_KEY) ?? 'null'))
+    return openCollection(localStorage.getItem(COLLECTION_KEY))
   } catch {
-    return parseCollection(null)
+    return emptyCollection()
   }
 }
 
@@ -58,7 +58,7 @@ function heroArt(garment: Garment, date: string): Art {
   if (result.changed) {
     collection = result.collection
     try {
-      localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection))
+      localStorage.setItem(COLLECTION_KEY, sealCollection(collection))
     } catch {}
   }
   return set.find((a) => a.name === result.name) ?? set[0]!
@@ -295,8 +295,9 @@ function renderReady(forecast: Forecast): string {
   const todayHours = todayHoursOf(forecast)
   const day = summarizeDay(todayHours, state.bias)
   const baseline = summarizeDay(todayHours, 0)
-  const art = heroArt(day.garment, today)
-  const fresh = isFresh(collection, art.name, today)
+  const unlockDay = collectionDay(forecast.instant)
+  const art = heroArt(day.garment, unlockDay)
+  const fresh = isFresh(collection, art.name, unlockDay)
 
   const slotHours = todaySlots(hours, now)
   const slots: Slot[] = slotHours.map((h) => ({ time: h.time, garment: scoreHour(h, state.bias).garment }))
@@ -417,13 +418,13 @@ wardrobe.setAttribute('aria-labelledby', 'sop-wardrobe-h')
 document.body.append(wardrobe)
 
 function openWardrobe() {
-  const today = state.forecast?.now.slice(0, 10) ?? ''
+  const today = state.forecast ? collectionDay(state.forecast.instant) : ''
   const shown = state.forecast ? heroArt(summarizeDay(todayHoursOf(state.forecast), state.bias).garment, today).name : undefined
   const owned = (a: Art) => collection.unlocked.includes(a.name)
   const card = (garment: Garment) => (a: Art) => {
     if (!owned(a)) {
       return `<li class="wardrobe-item wardrobe-${garment} locked">
-        <div class="wardrobe-art" aria-hidden="true">${a.svg}</div>
+        <div class="wardrobe-art" aria-hidden="true">${LOCKED[garment]}</div>
         <span class="wardrobe-name">???</span>
         <span class="wardrobe-note">Turns up on a ${garment} day</span>
       </li>`

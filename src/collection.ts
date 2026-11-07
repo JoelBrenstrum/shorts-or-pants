@@ -37,11 +37,38 @@ export function parseCollection(raw: unknown): Collection {
   }
 }
 
+const SEAL_KEY = 'legs-out-dont-be-a-hero'
+
+const scramble = (text: string) =>
+  Array.from(text, (c, i) => String.fromCharCode(c.charCodeAt(0) ^ SEAL_KEY.charCodeAt(i % SEAL_KEY.length))).join('')
+
+const checksum = (body: string) => hashString(`${SEAL_KEY}:${body}`).toString(36)
+
+export function sealCollection(collection: Collection): string {
+  const body = btoa(scramble(encodeURIComponent(JSON.stringify(collection))))
+  return `${body}.${checksum(body)}`
+}
+
+export function openCollection(sealed: string | null): Collection {
+  const [body, sum] = sealed?.split('.') ?? []
+  if (!body || sum !== checksum(body)) return emptyCollection()
+  try {
+    return parseCollection(JSON.parse(decodeURIComponent(scramble(atob(body)))))
+  } catch {
+    return emptyCollection()
+  }
+}
+
 export function unlockOrder(names: string[]): string[] {
   return [...names].sort((a, b) => hashString(a) - hashString(b))
 }
 
-export function choose(collection: Collection, garment: Garment, date: string, names: string[]): Choice {
+export function collectionDay(instant: number, timeZone?: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(instant)
+}
+
+export function choose(collection: Collection, garment: Garment, requested: string, names: string[]): Choice {
+  const date = requested < collection.date ? collection.date : requested
   const sameDay = collection.date === date
   const existing = sameDay ? collection.picks[garment] : undefined
   if (existing && names.includes(existing)) return { name: existing, collection, changed: false }

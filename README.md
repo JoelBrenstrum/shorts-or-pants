@@ -1,6 +1,6 @@
 # Shorts or Pants
 
-Should you wear shorts or pants today? Live at [shorts.brenstrum.com](https://shorts.brenstrum.com).
+Should you wear shorts or pants today? Live at [shortsorpants.brenstrum.com](https://shortsorpants.brenstrum.com).
 
 - Weather: [Open-Meteo](https://open-meteo.com) (no key)
 - Location: browser geolocation, falling back to Cloudflare's IP geolocation via `functions/api/location.ts`, plus city search
@@ -21,4 +21,4 @@ pnpm test
 pnpm deploy
 ```
 
-Then in Cloudflare → Workers & Pages → shorts-or-pants → Custom domains, add `shorts.brenstrum.com`.
+Then in Cloudflare → Workers & Pages → shorts-or-pants → Custom domains, add `shortsorpants.brenstrum.com`.

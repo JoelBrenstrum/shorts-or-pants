@@ -17,11 +17,13 @@ type HourlyKey = (typeof HOURLY)[number]
 
 export interface OpenMeteoResponse {
   current: { time: string }
+  utc_offset_seconds?: number
   hourly: { time: string[] } & Record<HourlyKey, (number | null)[]>
 }
 
 export interface Forecast {
   now: string
+  instant: number
   hours: HourWeather[]
 }
 
@@ -60,7 +62,8 @@ export function parseForecast(res: OpenMeteoResponse): Forecast {
       },
     ]
   })
-  return { now: res.current.time, hours }
+  const instant = Date.parse(`${res.current.time}:00Z`) - (res.utc_offset_seconds ?? 0) * 1000
+  return { now: res.current.time, instant, hours }
 }
 
 export function groupByDate(hours: HourWeather[]): Map<string, HourWeather[]> {

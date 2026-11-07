@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { choose, emptyCollection, isFresh, parseCollection, unlockOrder, type Collection } from './collection'
+import { choose, collectionDay, emptyCollection, openCollection, sealCollection, isFresh, parseCollection, unlockOrder, type Collection } from './collection'
 
 const SHORTS = ['Cargo', 'Board', 'Bike', 'Swim']
 const PANTS = ['Chinos', 'Joggers']
@@ -61,6 +61,30 @@ describe('choose', () => {
   })
 })
 
+describe('collection day', () => {
+  it('uses the device time zone, whichever city the forecast is for', () => {
+    const instant = Date.parse('2026-11-08T20:00:00Z')
+    expect(collectionDay(instant, 'Pacific/Auckland')).toBe('2026-11-09')
+    expect(collectionDay(instant, 'Pacific/Honolulu')).toBe('2026-11-08')
+  })
+
+  it('never unlocks again for a date before the last visit', () => {
+    const today = choose(emptyCollection(), 'shorts', '2026-11-09', SHORTS)
+    const yesterday = choose(today.collection, 'shorts', '2026-11-08', SHORTS)
+    expect(yesterday.name).toBe(today.name)
+    expect(yesterday.changed).toBe(false)
+    expect(yesterday.collection.unlocked).toEqual([today.name])
+  })
+
+  it('stops date-line hopping from unlocking more than one per day', () => {
+    let collection = emptyCollection()
+    for (const date of ['2026-11-09', '2026-11-08', '2026-11-09', '2026-11-08']) {
+      collection = choose(collection, 'shorts', date, SHORTS).collection
+    }
+    expect(collection.unlocked).toHaveLength(1)
+  })
+})
+
 describe('parseCollection', () => {
   it('round-trips a stored collection', () => {
     const { collection } = choose(emptyCollection(), 'shorts', '2026-11-08', SHORTS)
@@ -75,5 +99,26 @@ describe('parseCollection', () => {
       picks: {},
       fresh: [],
     })
+  })
+})
+
+describe('sealed storage', () => {
+  const stored: Collection = { unlocked: ['Jorts', 'Chinos'], date: '2026-11-08', picks: { shorts: 'Jorts' }, fresh: ['Jorts'] }
+
+  it('round-trips a collection', () => {
+    expect(openCollection(sealCollection(stored))).toEqual(stored)
+  })
+
+  it('is not readable as plain text', () => {
+    expect(sealCollection(stored)).not.toContain('Jorts')
+  })
+
+  it('starts fresh when the stored value has been tampered with', () => {
+    const [body, sum] = sealCollection(stored).split('.')
+    const flipped = `${body!.slice(0, -2)}${body!.at(-2) === 'A' ? 'B' : 'A'}${body!.at(-1)}`
+    expect(openCollection(`${flipped}.${sum}`)).toEqual(emptyCollection())
+    expect(openCollection(JSON.stringify({ ...stored, unlocked: ['Jorts', 'Board shorts'] }))).toEqual(emptyCollection())
+    expect(openCollection(null)).toEqual(emptyCollection())
+    expect(openCollection('garbage')).toEqual(emptyCollection())
   })
 })

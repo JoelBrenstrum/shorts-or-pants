@@ -114,3 +114,11 @@ export const PANTS: Art[] = [
     `<path d="M48 30H152L158 184H110L100 80L90 184H42Z" fill="#FFC93C"/><path d="M45 146H91V158H45Z" fill="#DDE0EA"/><path d="M109 146H156V158H109Z" fill="#DDE0EA"/><path d="M48 30H152V46H48Z" fill="#E8AE1E"/><path d="M100 46v28M66 50l-2 20M134 50l2 20" stroke-width="3.5"/><g fill="#FFFFFF" stroke-width="2.5"><path d="M70 96q-5 8 0 11q5-3 0-11z"/><path d="M82 122q-4 7 0 9q4-2 0-9z"/><path d="M126 92q-5 8 0 11q5-3 0-11z"/><path d="M138 120q-4 7 0 9q4-2 0-9z"/><path d="M120 170q-4 7 0 9q4-2 0-9z"/></g><path d="M42 176H90M110 176H158" stroke-width="3.5"/><path d="M48 30H152L158 184H110L100 80L90 184H42Z"/>`,
   ),
 ]
+
+const mystery = (outline: string) =>
+  svg('Not found yet', `<path d="${outline}" fill="#1E1B2E"/>`)
+
+export const LOCKED: Record<'shorts' | 'pants', string> = {
+  shorts: mystery('M44 40H156L164 150H108L100 92L92 150H36Z'),
+  pants: mystery('M54 22H146L158 182H112L100 78L88 182H42Z'),
+}

@@ -45,6 +45,11 @@ describe('parseForecast', () => {
     })
   })
 
+  it('works out the real instant from the location time and its UTC offset', () => {
+    const { instant } = parseForecast({ ...response, utc_offset_seconds: 13 * 3600 })
+    expect(new Date(instant).toISOString()).toBe('2026-11-07T21:15:00.000Z')
+  })
+
   it('fills missing values with safe defaults', () => {
     const second = parseForecast(response).hours[1]
     expect(second).toMatchObject({ temp: 15, humidity: 0, precipProb: 0, isDay: false })
