@@ -1,7 +1,8 @@
 import './style.css'
 import { dateLabel, factorCards, formatClock, slotFlag, switchSummary, tuneHint, tuneLabel, weekday, type Slot } from './copy'
 import { currentSlotTime, fetchForecast, groupByDate, todaySlots, weatherKind, type Forecast, type WeatherKind } from './forecast'
-import { pickArt } from './garments'
+import { PANTS, SHORTS, type Art } from './art'
+import { choose, COLLECTION_KEY, isFresh, parseCollection, type Collection } from './collection'
 import { parseScheme, resolveScheme, SCHEME_KEY, toggleScheme, type Scheme } from './scheme'
 import { geocodeUrl, parseGeocodeResults, parseReverseGeocode, reverseGeocodeUrl, type Place, type SearchResult } from './location'
 import {
@@ -40,6 +41,28 @@ const state = {
 }
 
 const app = document.querySelector<HTMLDivElement>('#app')!
+const ART: Record<Garment, Art[]> = { shorts: SHORTS, pants: PANTS }
+let collection = readCollection()
+
+function readCollection(): Collection {
+  try {
+    return parseCollection(JSON.parse(localStorage.getItem(COLLECTION_KEY) ?? 'null'))
+  } catch {
+    return parseCollection(null)
+  }
+}
+
+function heroArt(garment: Garment, date: string): Art {
+  const set = ART[garment]
+  const result = choose(collection, garment, date, set.map((a) => a.name))
+  if (result.changed) {
+    collection = result.collection
+    try {
+      localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection))
+    } catch {}
+  }
+  return set.find((a) => a.name === result.name) ?? set[0]!
+}
 const systemDark = matchMedia('(prefers-color-scheme: dark)')
 let savedScheme = readScheme()
 
@@ -127,6 +150,8 @@ const TARGET = icon(
 const WARNING = icon(18, '<path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.6L2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/>', `${STROKE} stroke-width="2.4"`)
 const SUN = icon(20, WEATHER.sun[1], `${STROKE} stroke-width="2.2"`)
 const MOON = icon(20, WEATHER.night[1], `${STROKE} stroke-width="2.2"`)
+const HANGER_ICON = icon(20, '<path d="M12 7c0-2 3-2 3-4.5S12 0 11 1.5"/><path d="M12 7L2.5 14.5h19z"/>', `${STROKE} stroke-width="2.2"`)
+const CLOSE = icon(22, '<path d="M6 6l12 12M18 6L6 18"/>', `${STROKE} stroke-width="2.6"`)
 const HANGER =
   '<svg class="sway" width="170" height="190" viewBox="0 0 170 190" aria-hidden="true" fill="none" stroke="var(--ink)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M85 34c0-12 18-12 18-24S85-2 80 6"/><path d="M85 34L14 78h142z"/><path d="M50 98h70l6 76H96l-11-48-11 48H44z" stroke-dasharray="9 9" opacity=".55"/></svg>'
 
@@ -270,7 +295,8 @@ function renderReady(forecast: Forecast): string {
   const todayHours = todayHoursOf(forecast)
   const day = summarizeDay(todayHours, state.bias)
   const baseline = summarizeDay(todayHours, 0)
-  const art = pickArt(day.garment, today)
+  const art = heroArt(day.garment, today)
+  const fresh = isFresh(collection, art.name, today)
 
   const slotHours = todaySlots(hours, now)
   const slots: Slot[] = slotHours.map((h) => ({ time: h.time, garment: scoreHour(h, state.bias).garment }))
@@ -286,7 +312,8 @@ function renderReady(forecast: Forecast): string {
         <div class="slot slide tone-${slot.garment}${flag === 'Now' ? ' is-now' : ''}" style="animation-delay:${(0.25 + i * 0.07).toFixed(2)}s">
           <span class="slot-time">${formatHour(h.time)}</span>
           ${garmentIcon(slot.garment, 26)}
-          <span class="slot-feels">${Math.round(h.apparentTemp)}°</span>
+          <span class="slot-temp">${Math.round(h.temp)}°</span>
+          <span class="slot-feels">feels ${Math.round(h.apparentTemp)}°</span>
           ${weatherIcon(weatherKind(h))}
           <span class="slot-word">${capitalise(slot.garment)}</span>
         </div>
@@ -300,7 +327,7 @@ function renderReady(forecast: Forecast): string {
     .map(
       (f) => `<div class="factor">
         <span class="factor-name">${f.name}</span>
-        <span class="factor-value">${f.value}</span>
+        <span class="factor-value">${f.value}${f.actual ? ` <span class="factor-actual">${f.actual}</span>` : ''}</span>
         <span class="factor-note">${f.note}</span>
         <div class="lean-bar" role="img" aria-label="${f.leanLabel}">
           <span class="lean-mid"></span>
@@ -320,7 +347,7 @@ function renderReady(forecast: Forecast): string {
         <span class="day-name"><span>${weekday(date)}</span><span class="day-tag">${isToday ? 'Today' : ''}</span></span>
         <span class="day-icon tone-${v.garment}">${garmentIcon(v.garment, 22)}</span>
         <span class="day-word ${v.garment}">${capitalise(v.garment)}</span>
-        <span class="day-temps">${Math.round(v.high)}° <span>/ ${Math.round(v.low)}°</span></span>
+        <span class="day-temps"><span class="day-actual">${Math.round(v.tempHigh)}° <span>/ ${Math.round(v.tempLow)}°</span></span><span class="day-feels">feels ${Math.round(v.high)}° / ${Math.round(v.low)}°</span></span>
       </li>`
     })
     .join('')
@@ -332,7 +359,8 @@ function renderReady(forecast: Forecast): string {
           <h1 class="word pop ${day.garment}">${day.garment.toUpperCase()}</h1>
           <div class="hero-art">
             <div class="halo" aria-hidden="true"></div>
-            <div class="garment drop" title="${art.name}">${art.svg}</div>
+            <button type="button" class="garment drop" data-action="open-wardrobe" aria-label="${art.name}. See the wardrobe">${art.svg}</button>
+            ${fresh ? `<button type="button" class="new-badge" data-action="open-wardrobe">New in your wardrobe!</button>` : ''}
           </div>
           <p class="reason">${esc(reasonFor(day, baseline))}</p>
           ${day.caveat ? `<span class="caveat">${WARNING}${esc(day.caveat)}</span>` : ''}
@@ -374,11 +402,68 @@ function renderReady(forecast: Forecast): string {
       <h2 id="sop-week">This week</h2>
       <ol class="week">${weekHtml}</ol>
     </section>
+    <div class="wardrobe-cta">
+      <button type="button" class="btn-outline" data-action="open-wardrobe">${HANGER_ICON}See the wardrobe</button>
+    </div>
     <footer>
-      <span>Feels-like temps · updated ${formatClock(now)}</span>
+      <span>Verdicts use feels-like temps · updated ${formatClock(now)}</span>
       <span>Not responsible for chilly knees.</span>
     </footer>`
 }
+
+const wardrobe = document.createElement('dialog')
+wardrobe.className = 'wardrobe'
+wardrobe.setAttribute('aria-labelledby', 'sop-wardrobe-h')
+document.body.append(wardrobe)
+
+function openWardrobe() {
+  const today = state.forecast?.now.slice(0, 10) ?? ''
+  const shown = state.forecast ? heroArt(summarizeDay(todayHoursOf(state.forecast), state.bias).garment, today).name : undefined
+  const owned = (a: Art) => collection.unlocked.includes(a.name)
+  const card = (garment: Garment) => (a: Art) => {
+    if (!owned(a)) {
+      return `<li class="wardrobe-item wardrobe-${garment} locked">
+        <div class="wardrobe-art" aria-hidden="true">${a.svg}</div>
+        <span class="wardrobe-name">???</span>
+        <span class="wardrobe-note">Turns up on a ${garment} day</span>
+      </li>`
+    }
+    const tag = isFresh(collection, a.name, today) ? 'New' : a.name === shown ? 'Today' : ''
+    return `<li class="wardrobe-item wardrobe-${garment}${a.name === shown ? ' picked' : ''}">
+      ${tag ? `<span class="picked-tag">${tag}</span>` : ''}
+      <div class="wardrobe-art">${a.svg}</div>
+      <span class="wardrobe-name">${a.name}</span>
+      <span class="wardrobe-note">${a.note}</span>
+    </li>`
+  }
+  const count = (set: Art[]) => set.filter(owned).length
+  const total = count(SHORTS) + count(PANTS)
+  const all = SHORTS.length + PANTS.length
+  const progress =
+    total === all
+      ? 'Full set. Absolute legend.'
+      : `You've collected ${total} of ${all}. A new one turns up each day you visit.`
+  wardrobe.innerHTML = `<div class="wardrobe-inner">
+      <div class="wardrobe-head">
+        <div>
+          <h2 id="sop-wardrobe-h">The wardrobe</h2>
+          <p>${progress}</p>
+          <div class="progress" role="img" aria-label="${total} of ${all} collected"><span style="width:${Math.round((total / all) * 100)}%"></span></div>
+        </div>
+        <button type="button" class="scheme-toggle" data-action="close-wardrobe" aria-label="Close">${CLOSE}</button>
+      </div>
+      <h3>Shorts · ${count(SHORTS)}/${SHORTS.length}</h3>
+      <ul class="wardrobe-grid">${SHORTS.map(card('shorts')).join('')}</ul>
+      <h3>Pants · ${count(PANTS)}/${PANTS.length}</h3>
+      <ul class="wardrobe-grid">${PANTS.map(card('pants')).join('')}</ul>
+    </div>`
+  wardrobe.showModal()
+}
+
+wardrobe.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement
+  if (target === wardrobe || target.closest('[data-action="close-wardrobe"]')) wardrobe.close()
+})
 
 function render() {
   const ready = !state.loading && !state.error && state.forecast
@@ -475,7 +560,9 @@ app.addEventListener('click', (e) => {
   const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]')
   if (!target) return
   const action = target.dataset.action
-  if (action === 'toggle-scheme') {
+  if (action === 'open-wardrobe') {
+    openWardrobe()
+  } else if (action === 'toggle-scheme') {
     setScheme(toggleScheme(currentScheme()))
   } else if (action === 'toggle-why') {
     state.whyOpen = !state.whyOpen

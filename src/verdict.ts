@@ -20,6 +20,8 @@ export interface DayVerdict extends Verdict {
   average: HourWeather
   high: number
   low: number
+  tempHigh: number
+  tempLow: number
   caveat?: string
 }
 
@@ -125,11 +127,14 @@ export function summarizeDay(hours: HourWeather[], bias = 0): DayVerdict {
   const average = averageWeather(basis)
   const verdict = scoreHour(average, bias)
   const feels = hours.map((h) => h.apparentTemp)
+  const temps = hours.map((h) => h.temp)
   return {
     ...verdict,
     average,
     high: Math.max(...feels),
     low: Math.min(...feels),
+    tempHigh: Math.max(...temps),
+    tempLow: Math.min(...temps),
     caveat: caveatFor(verdict.garment, hours, basis, bias),
   }
 }
@@ -155,7 +160,9 @@ const PHRASES: Record<Garment, Record<Confidence, string>> = {
 }
 
 export function reasonFor(day: DayVerdict, baseline: DayVerdict): string {
-  const feels = `Feels like ${Math.round(day.average.apparentTemp)}°`
+  const feelsLike = Math.round(day.average.apparentTemp)
+  const actual = Math.round(day.average.temp)
+  const feels = actual === feelsLike ? `Feels like ${feelsLike}°` : `${actual}°, feels like ${feelsLike}°`
   if (day.garment !== baseline.garment) {
     return day.garment === 'pants' ? `${feels}, but you run cold. Pants, no shame.` : `${feels}, but you run hot. Legs out.`
   }

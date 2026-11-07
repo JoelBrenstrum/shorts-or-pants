@@ -187,3 +187,18 @@ describe('reasonFor', () => {
     expect(reason(day(DATE, () => ({ apparentTemp: 15, windKmh: 15 })), 3)).toBe('Feels like 15°, but you run hot. Legs out.')
   })
 })
+
+describe('actual temperature', () => {
+  it('tracks actual highs and lows separately from feels-like', () => {
+    const v = summarizeDay(day(DATE, (h) => ({ temp: 10 + h / 2, apparentTemp: 8 + h / 2 })))
+    expect(v.tempHigh).toBeCloseTo(21.5)
+    expect(v.tempLow).toBe(10)
+    expect(v.high).toBeCloseTo(19.5)
+    expect(v.low).toBe(8)
+  })
+
+  it('leads the reason with the actual temp when it differs', () => {
+    const hours = day(DATE, () => ({ temp: 12, apparentTemp: 9, windKmh: 45, windDir: 180 }))
+    expect(reasonFor(summarizeDay(hours), summarizeDay(hours))).toBe("12°, feels like 9° with a stiff southerly. Don't be a hero.")
+  })
+})

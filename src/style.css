@@ -510,6 +510,9 @@ header {
   position: relative;
   width: 250px;
   height: 250px;
+  padding: 0;
+  border: 0;
+  background: none;
 }
 
 .garment svg {
@@ -664,9 +667,18 @@ h2 {
   font-weight: 700;
 }
 
-.slot-feels {
+.slot-temp {
   font-size: 18px;
   font-weight: 700;
+  line-height: 1;
+}
+
+.slot-feels {
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: -3px;
+  opacity: 0.8;
+  white-space: nowrap;
 }
 
 .slot-word {
@@ -768,6 +780,11 @@ h2 {
   font-size: 22px;
   font-weight: 700;
   line-height: 1.1;
+}
+
+.factor-actual {
+  font-size: 14px;
+  color: var(--sub);
 }
 
 .factor-note {
@@ -956,13 +973,202 @@ h2 {
 }
 
 .day-temps {
-  font-size: 15px;
-  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   white-space: nowrap;
 }
 
-.day-temps span {
+.day-actual {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.day-actual span {
   font-weight: 500;
+  color: var(--sub);
+}
+
+.day-feels {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sub);
+}
+
+.wardrobe-cta {
+  display: flex;
+  justify-content: center;
+}
+
+.wardrobe-cta button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wardrobe {
+  width: min(960px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 28px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.wardrobe::backdrop {
+  background: rgba(10, 10, 20, 0.55);
+}
+
+.wardrobe-inner {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wardrobe-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.wardrobe-head h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1;
+}
+
+.wardrobe-head p {
+  margin-top: 6px;
+  font-size: 15px;
+  color: var(--sub);
+}
+
+.wardrobe h3 {
+  margin: 8px 0 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sub);
+}
+
+.wardrobe-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.wardrobe-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 10px 16px;
+  border-radius: 22px;
+  text-align: center;
+}
+
+.wardrobe-shorts {
+  background: color-mix(in srgb, var(--s-bg) 40%, var(--card));
+}
+
+.wardrobe-pants {
+  background: color-mix(in srgb, var(--p-bg) 30%, var(--card));
+}
+
+.wardrobe-item.locked .wardrobe-art svg {
+  filter: brightness(0);
+  opacity: 0.16;
+}
+
+.wardrobe-item.locked .wardrobe-name {
+  letter-spacing: 0.2em;
+  color: var(--sub);
+}
+
+.progress {
+  margin-top: 12px;
+  width: min(320px, 100%);
+  height: 10px;
+  border-radius: 5px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.new-badge {
+  position: absolute;
+  top: 6%;
+  right: -4%;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--display);
+  font-size: 15px;
+  line-height: 1.1;
+  max-width: 130px;
+  rotate: 10deg;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.animate .new-badge {
+  animation: sop-pop 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) 1s both;
+}
+
+.wardrobe-item.picked {
+  box-shadow: 0 0 0 3px var(--ink);
+}
+
+.picked-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wardrobe-art {
+  width: 100%;
+  max-width: 160px;
+  aspect-ratio: 1;
+}
+
+.wardrobe-art svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wardrobe-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.wardrobe-note {
+  font-size: 13px;
+  line-height: 1.3;
   color: var(--sub);
 }
 
@@ -1167,7 +1373,23 @@ footer {
   }
 
   .day-temps {
+    align-items: center;
+  }
+
+  .day-actual {
     font-size: 16px;
+  }
+
+  .wardrobe-inner {
+    padding: 36px 40px;
+  }
+
+  .wardrobe {
+    width: min(1120px, calc(100% - 32px));
+  }
+
+  .wardrobe-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 

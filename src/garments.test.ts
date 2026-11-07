@@ -1,22 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PANTS, SHORTS } from './art'
-import { hashString, pickArt, pickIndex } from './garments'
-
-describe('pickArt', () => {
-  it('is stable for the same seed', () => {
-    expect(pickArt('shorts', '2026-11-08')).toBe(pickArt('shorts', '2026-11-08'))
-  })
-
-  it('picks from the matching collection', () => {
-    expect(SHORTS).toContain(pickArt('shorts', 'x'))
-    expect(PANTS).toContain(pickArt('pants', 'x'))
-  })
-
-  it('spreads across the collection over a month of days', () => {
-    const picks = new Set(Array.from({ length: 30 }, (_, d) => pickArt('shorts', `2026-11-${d}`).name))
-    expect(picks.size).toBe(SHORTS.length)
-  })
-})
+import { hashString, pickIndex } from './garments'
 
 describe('pickIndex', () => {
   it('stays within bounds', () => {
@@ -31,5 +15,15 @@ describe('pickIndex', () => {
     expect(hashString('hello')).toBe(hashString('hello'))
     expect(hashString('hello')).toBeGreaterThanOrEqual(0)
     expect(hashString('hello')).toBeLessThan(2 ** 32)
+  })
+})
+
+describe('wardrobe', () => {
+  it('has ten of each with unique names and notes', () => {
+    expect(SHORTS).toHaveLength(10)
+    expect(PANTS).toHaveLength(10)
+    const names = [...SHORTS, ...PANTS].map((a) => a.name)
+    expect(new Set(names).size).toBe(names.length)
+    for (const art of [...SHORTS, ...PANTS]) expect(art.note).not.toBe('')
   })
 })

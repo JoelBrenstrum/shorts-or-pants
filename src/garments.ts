@@ -1,6 +1,3 @@
-import { PANTS, SHORTS, type Art } from './art'
-import type { Garment } from './verdict'
-
 export function hashString(input: string): number {
   let hash = 0x811c9dc5
   for (const char of input) {
@@ -12,10 +9,4 @@ export function hashString(input: string): number {
 
 export function pickIndex(seed: string, length: number): number {
   return hashString(seed) % length
-}
-
-export function pickArt(garment: Garment, seed: string, collection = garment === 'shorts' ? SHORTS : PANTS): Art {
-  const art = collection[pickIndex(`${garment}:${seed}`, collection.length)]
-  if (!art) throw new Error(`No art for ${garment}`)
-  return art
 }

@@ -39,6 +39,7 @@ describe('factorCards', () => {
 
   it('describes the feels-like peak', () => {
     expect(card('feelsLike').note).toBe('Peaks at 28° around 3pm')
+    expect(card('feelsLike').actual).toBe('Actual 24°')
     expect(card('feelsLike').tone).toBe('shorts')
     expect(card('feelsLike').position).toBe(98)
   })

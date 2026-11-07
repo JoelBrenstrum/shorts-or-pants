@@ -19,6 +19,7 @@ export interface FactorCard {
   key: FactorKey
   name: string
   value: string
+  actual?: string
   note: string
   position: number
   tone: Tone
@@ -102,10 +103,11 @@ export function factorCards(hours: HourWeather[], day: DayVerdict): FactorCard[]
   const peak = basis.reduce((max, h) => (h.apparentTemp > max.apparentTemp ? h : max))
   const maxRain = Math.max(...basis.map((h) => h.precipProb))
   const maxUv = Math.max(...basis.map((h) => h.uv))
-  const details: Record<FactorKey, { name: string; value: string; note: string }> = {
+  const details: Record<FactorKey, { name: string; value: string; actual?: string; note: string }> = {
     feelsLike: {
       name: 'Feels like',
       value: `${Math.round(avg.apparentTemp)}°`,
+      actual: `Actual ${Math.round(avg.temp)}°`,
       note: `Peaks at ${Math.round(peak.apparentTemp)}° around ${formatHour(peak.time)}`,
     },
     humidity: { name: 'Humidity', value: `${Math.round(avg.humidity)}%`, note: humidityNote(avg.humidity, avg.apparentTemp) },

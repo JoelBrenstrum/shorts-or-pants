@@ -3,7 +3,6 @@ import type { HourWeather } from './types'
 export function hour(time: string, overrides: Partial<HourWeather> = {}): HourWeather {
   return {
     time,
-    temp: 20,
     apparentTemp: 20,
     humidity: 50,
     windKmh: 10,
@@ -13,6 +12,7 @@ export function hour(time: string, overrides: Partial<HourWeather> = {}): HourWe
     weatherCode: 0,
     isDay: true,
     ...overrides,
+    temp: overrides.temp ?? overrides.apparentTemp ?? 20,
   }
 }
 
